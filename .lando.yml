@@ -74,7 +74,7 @@ services:
       gulp-cli: latest
     overrides:
       # UPDATE: this to a random port so projects dont clash
-      # Make sure to adjust your web/themes/custom/bixal_drop/gulp.js to match.
+      # Make sure to adjust your web/themes/custom/my_theme/gulp.js to match.
       ports:
         - '31549:31549'
   pma:
