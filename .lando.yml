@@ -1,0 +1,169 @@
+# https://docs.lando.dev/
+# UPDATE: name property should be unique name for project.
+name: drupal9
+recipe: drupal9
+excludes:
+  - vendor
+  - node_modules
+  - modules/contrib
+config:
+  # Set your composer version.
+  composer_version: 2
+  # Match your php version for the project.
+  php: '8.0'
+  # Adjust this to point to directory where inde.php exist.
+  webroot: web
+  # Make false if you need better performance and dont need to use XDebug.
+  xdebug: true
+# https://docs.lando.dev/config/events.html#usage
+events:
+  post-rebuild:
+    - appserver: './.lando/build/drupal.sh'
+    - node: './.lando/build/theme.sh'
+    - appserver: './.lando/post_build/drupal.sh'
+# Can setup proxy urls to your services.
+# https://docs.lando.dev/config/proxy.html
+proxy:
+  mailhog:
+    # UPDATE: to the same as the name key above.
+    - mail.drupal9.lndo.site
+  pma:
+    # UPDATE: to the same as the name key above.
+    - pma.drupal9.lndo.site
+  search:
+    # UPDATE: to the same as the name key above.
+    - solr.drupal9.lndo.site:8983
+  node:
+    - theme.drupal9.lndo.site:31549
+# Define services, remove any services your project doesn't need.
+# https://docs.lando.dev/config/services.html#supported-services
+services:
+  appserver:
+    build:
+      - "composer global require drupal/coder"
+      - "/app/vendor/bin/phpcs --config-set installed_paths /app/vendor/drupal/coder/coder_sniffer"
+    xdebug: true
+    # Point to custom development php.ini
+    config:
+      php: '.lando/config/php.ini'
+    overrides:
+      environment:
+        DRUSH_OPTIONS_ROOT: '/app/web'
+        # UPDATE: to the same as the name key above.
+        DRUSH_OPTIONS_URI: 'http://drupal9.lndo.site'
+        # Adding this variable for PHPStorm
+        PHP_IDE_CONFIG: 'serverName=appserver'
+        XDEBUG_CONFIG: 'remote_enable=1 remote_host=host.docker.internal'
+        LANDO_HOST_IP: 'host.docker.internal'
+  # Capture outbound email traffic
+  # https://github.com/mailhog/MailHog
+  mailhog:
+    type: mailhog
+    hogfrom:
+      - appserver
+    portforward: true
+  # Adjust node to your project major version.
+  node:
+    type: 'node:14'
+    scanner: false
+    ssl: true
+    sslExpose: false
+    # Install global npm packages
+    globals:
+      backstopjs: latest
+      gulp-cli: latest
+    overrides:
+      # UPDATE: this to a random port so projects dont clash
+      # Make sure to adjust your web/themes/custom/bixal_drop/gulp.js to match.
+      ports:
+        - '31549:31549'
+  pma:
+    type: phpmyadmin
+    hosts:
+      - database
+  # UPDATE: SOLR version might need to change based on your project.
+  # https://docs.lando.dev/config/solr.html#configuration
+  search:
+    type: 'solr:8.6'
+    config:
+      # When exporting your solr config from Drupal search api UI
+      # Delete the exsisteing config/solr/conf, rename your export to
+      # conf and make sure it lives in the config/solr folder.
+      conf: './config/solr/conf'
+    # UPDATE: Update the core name or can
+    # leave the same and manage with configuration.
+    core: drupal9
+# Setup tooling so when you type lando keyword
+# it knows the service to use.
+# https://docs.lando.dev/config/tooling.html#usage
+tooling:
+  backstop:
+    service: node
+  behat:
+    cmd: '/app/vendor/bin/behat'
+    service: appserver
+  build:
+    description: 'Build Vendor, Core, Modules, and Themes'
+    cmd:
+      - appserver: './.lando/build/drupal.sh'
+      - node: './.lando/build/theme.sh'
+      - appserver: './.lando/post_build/drupal.sh'
+  drupalcs:
+    service: appserver
+    cmd: "/app/vendor/bin/phpcs --standard=Drupal,DrupalPractice"
+    description: Run phpcs Drupal Coding Standards against a given file or directory.
+  drupalcbf:
+    service: appserver
+    cmd: "/app/vendor/bin/phpcbf --standard=Drupal"
+    description: Automatically fix Drupal coding standards suggestions.
+  composer:
+    cmd: '/usr/local/bin/composer'
+    service: appserver
+  drush:
+    cmd: '/app/vendor/bin/drush'
+    service: appserver
+  drupal:
+    cmd: '/app/vendor/bin/drupal'
+    service: appserver
+  node:
+    service: node
+  npm:
+    service: node
+  theme:
+    cmd: './.lando/build_theme.sh'
+    description: Build for frontend theme.
+    service: node
+  vendor:
+    cmd: './.lando/build_drupal.sh'
+    description: Build for drupal Vendor, Core, Modules, and Themes.
+    service: appserver
+  gulp:
+    service: node
+    dir: '/app/web/themes/custom/my_theme'
+    cmd: gulp watch
+  gulp-build:
+    service: node
+    dir: '/app/web/themes/custom/my_theme'
+    cmd: gulp
+  gulp-svg:
+    service: node
+    dir: '/app/web/themes/custom/my_theme'
+    cmd: gulp svg
+  gulp-js:
+    service: node
+    dir: '/app/web/themes/custom/my_theme'
+    cmd: gulp js
+  gulp-css:
+    service: node
+    dir: '/app/web/themes/custom/my_theme'
+    cmd: gulp css
+  xoff:
+    cmd: 'rm /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && /etc/init.d/apache2 reload'
+    description: Disable xdebug.
+    service: appserver
+    user: root
+  xon:
+    cmd: 'docker-php-ext-enable xdebug && /etc/init.d/apache2 reload'
+    description: Enable xdebug.
+    service: appserver
+    user: root
