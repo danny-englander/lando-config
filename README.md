@@ -43,7 +43,7 @@ error_log = /tmp/php_error.log
 ## Tested on:
 
 * Mac OS / Lando with Docker desktop (Lando v3.0.26)
-* Windows 10 with Lando installed inside WSL 2 / Ubuntu Linux, i.e. not Lando for Windows (Lando v3.0.26)
+* Windows 10 with Lando installed inside WSL 2 / Ubuntu Linux, i.e. not Lando for Windows (Lando v3.5.1)
 
 ## Toggle Xdebug on and off
 
